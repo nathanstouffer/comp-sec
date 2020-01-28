@@ -1,0 +1,5 @@
+vm-image/*
+*.pdf
+*.log
+*.synctex.gz
+*.aux
