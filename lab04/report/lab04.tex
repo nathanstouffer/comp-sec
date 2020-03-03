@@ -1,0 +1,133 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{fancyvrb}
+
+\newcommand{\fig}[2]{ 
+\begin{figure}[h]
+	\centering
+	\caption{#2}
+	\includegraphics[width=.75\textwidth]{pics/#1}
+	\label{fig:#1}
+\end{figure} 
+}
+
+\begin{document}
+
+\title{CSCI 476: Lab 04}
+\author{Nathan Stouffer}
+\maketitle
+\newpage
+
+\section*{Task 1}
+
+In Task 1, we are required to find the memory locations of the libc functions system() and exit(). To do this, we use the gdb debugger. The results are displayed in Figure \ref{fig:task1}. Since we have turned off ASLR, we can guarantee that these values will be the same whenever the ``retlib" program is loaded into memory. With ASLR on, we would not have this guarantee.
+
+\fig{task1}{Showing memory addresses of libc functions}
+
+
+\newpage
+
+\section*{Task 2}
+
+Task 2 asks us to explore the memory locations of environment variables in the context of a running child process. In Figure \ref{fig:task2.1}, we first export an environment variable called ``MYSHELL" and then show that it exists in a child process.
+
+\fig{task2.1}{Showing environment variable set up}
+
+We would then want to know the memory location of the environment variable ``MYSHELL" in the child process. To do this, we first turn off ASLR. The programs displayed in Figure \ref{fig:task2.2} searches for the environment variable ``MYSHELL" and displays its contents and memory location. Since ASLR is off, the same memory address is printed when the program ``envaddr" is ran. However, it should also be noted that ``envaddr1" produces a different memory location. Namely, 2 bytes smaller than that of ``envaddr." This is because one of the environment variables includes the name of the program. We should keep this in mind in future tasks.
+
+\fig{task2.2}{Showing memory locations}
+
+\newpage
+
+\section*{Task 3}
+
+In Task 3, we are asked to carry out the return-to-libc attack. Note that this task assumes that ASLR is turned off. Similar to the buffer overflow attack, the return-to-libc attack relies on replacing specific memory in the stack to change program functionality. Namely, we would like to replace the return address of the vulnerable function with a call to ``system()" that opens a root shell. To do this, we require a few pieces of information. First, we need to know how far our buffer is from \$ebp. We do this using the gdb debugger. The setup is shown below in Figure \ref{fig:task3.1}.
+
+\fig{task3.1}{Showing gdb set-up}
+
+Now that we have the debugger running, Figure \ref{fig:task3.2} displays the memory address of \$ebp and \&buffer as well as the difference between them. This is so we know where \$ebp is relative to the beginning of our input string.
+
+\fig{task3.2}{Showing memory address}
+
+We now have all the required information to carry out the return-to-libc attack. Figure \ref{fig:task3.3} displays the python script that generates the input to the vulnerable program and following section makes reference to it. We now justify each of the choices that were made when setting values in the script. Let's begin with the memory addresses. Both the address stored in ``exit\_addr" and ``system\_addr" are gathered from Figure \ref{fig:task1} in Task 1. These are copied directly. The value inside of ``sh\_addr" is deduced from information in Figure \ref{fig:task2.2} in Task 2. We would like for ``sh\_addr" to point to the value of the environment variable ``MYSHELL." Figure \ref{fig:task2.2} (from Task 2) shows that this value depends on the name of the child program. The program ``envaddr" shows ``MYSHELL" to be at 0xbffffded while ``envaddr1" shows ``MYSHELL" to be at 0xbffffdeb (two bytes smaller). This shows that the address of ``MYSHELL" depends on the length of the name of the executable. Since we are running a program called ``retlib," we deduce that ``MYSHELL" will be at 0xbffffdef. We now discuss the locations of these memory values in our input string. Note that the variable ``dist" is set to 124 (the distance to \$ebp).
+
+\begin{enumerate}
+	\item ``system\_addr" We would like to replace the return address stored in the vulnerable function with that of system(). Since the return address for a function is always 4 bytes above \$ebp, that is where we place ``system\_addr" in our input.
+	\item ``sh\_addr" The value inside ``sh\_addr" is a function argument for the system() call. As such, it should be placed 8 bytes above the system() call," so we place it at 12 bytes above \$ebp.
+	\item ``exit\_addr" We would like to place the memory address of the function exit() in a place where it will be called during the function epilogue of system(). Here, we take into account that after a function epilogue-prologue sequence, the value of \$ebp is 4 bytes larger than it was before. So, we should place the memory address of exit() 4 bytes above where we would normally place a return address, that is 8 bytes above the current \$ebp. That way, it will be 4 bytes above \$ebp when system() is called. 
+\end{enumerate}
+
+\fig{task3.3}{Showing python script}
+
+Now that we have discussed the reasoning for each of the values in the malicious input, let's see if it works. Figure \ref{fig:task3.4} shows us getting a root shell after running the program ``retlib." However, it should be noted that there is a difference between the effective and real user id (the effective is root while the real is seed).
+
+\fig{task3.4}{Successfully achieved root shell}
+
+\newpage
+
+\subsection*{Attack Variation 1}
+
+This small variation on the return-to-libc attack does not place the memory address of exit() in the malicious input. Figure \ref{fig:task3.5} shows that we can still gain a root shell, so exit() is not necessary. However, it does make our attack less noticeable. As can be seen in Figure \ref{fig:task3.5}, after the shell session is terminated, there is a segmentation fault because the vulnerable program crashes. Providing the exit() function in our input makes the attack less noticeable.
+
+\fig{task3.5}{Removed exit()}
+
+\subsection*{Attack Variation 2}
+
+This variation on the attack changes the name of the program (note that the name must be a different length). Figure \ref{fig:task3.6} shows the results of this experiment. Namely, that we don't get a root shell. This is because, the memory address that we hard-coded in for the ``MYSHELL" environment variable is no longer accurate. Recall in Task 2 where we experimented with different program name lengths and found that it changed the memory location of the environment variables. This means we are sending some other environment variable as an argument to system(), one that does not launch a root shell.
+
+\fig{task3.6}{Different program name}
+
+\newpage
+
+\section*{Task 4}
+
+Task 4 focuses on address space randomization. We wonder whether the return-to-libc attack is affected by this countermeasure. This task shows that return-to-libc is affected. We are asked which of the following six values are incorrect (when address randomization is turned on): the three offsets in our python script and the three memory addresses. To be clear, the offset values are where we place the memory values in the malicious input. I would argue that all three memory addresses are incorrect while the values of the offsets remain correct. The offset values are correct because they are based on the size of the buffer variable in the vulnerable function. This buffer will remain a constant number of bytes away from \$ebp, so the variable values can stay constant even when address randomization is turned on. The same is not the case for the memory address.
+
+Take the memory address of ``MYSHELL." Task 2 used a program that printed out the memory address of ``MYSHELL," we use that same program here. Figure \ref{fig:task4.1} shows that (with address randomization turned on) the memory address of the ``MYSHELL" changes between program runs even though the name of the program remains constant. This means that the memory address we input for ``MYSHELL" is not accurate.
+
+\fig{task4.1}{Showing environment variable memory addresses}
+
+Figure \ref{fig:task4.2} shows the debugger set up for the program ``retlib." Note that we turn on address randomization within the debugger since, by default, it will disable address randomization.
+
+\fig{task4.2}{Setting up debugger}
+
+\newpage
+Now view Figures \ref{fig:task4.3} and \ref{fig:task4.4}. These two figures show two debugging runs of the program ``retlib." In each of them, we print out the memory addresses of the functions system() and exit(). The memory values differ between the two runs, meaning our input cannot be accurately crafted.
+
+\fig{task4.3}{Running ``retlib" in debugger}
+
+\fig{task4.4}{Running ``retlib" in debugger}
+
+Now that we have discussed why we will not get a root shell, let's show it. Figure \ref{fig:task4.5} shows a run of the ``retlib" program. Note that we get a segmentation fault becuase the memory addresses we tried to access did not belong to the program.
+
+\fig{task4.5}{No root shell}
+
+So address space randomization affects the performance of the return-to-libc attack because of its reliance on the memory address of function calls.
+
+\newpage
+
+\section*{Task 5 (Extra Credit)}
+
+Task 5 looks to defeat a countermeasure implemented in most shells to drop privileges when it detects that the euid is not the same is the real uid. To do this, we would like to set our uid to 0 (root) before we call the new shell. That means we need to know the memory address of setuid(). Figure \ref{fig:task5.1} shows the required memory address.
+
+\fig{task5.1}{Showing memory address of setuid()}
+
+Now that we have the memory address of setuid(), we need to change the input file. Figure \ref{fig:task5.2} shows the new script that produces the malicious input. Note a few changes from Task 3.
+\begin{enumerate}
+	\item The memory address 4 bytes above \$ebp is now the call to setuid(). This is because we want to run setuid() before system(). This means that the function argument 12 bytes above \$ebp is now the function argument for setuid(), which is a 0.
+	\item This means that we place the system() memory address 4 bytes above setuid() which is 8 bytes above \$ebp. The argument for system() goes 8 bytes above setuid(), that is, 16 bytes above \$ebp.
+	\item We can no longer call exit() because the place where the memory address of exit() needs to be is exactly where the function argument for setuid() is, so it would be overwritten.
+\end{enumerate}
+
+\fig{task5.2}{Showing script to create badfile}
+
+\newpage
+Figure \ref{fig:task5.3} first shows us turning off address randomization and linking back to a secure shell. We then run the new script to create ``badfile." Finally, we run the program ``retlib." We immediately get a root shell where the uid is 0, just as expected! Also note that we receive a segmentation fault when we exit the root shell since there is no call to the function exit().
+
+\fig{task5.3}{Getting root shell}
+
+Since we cannot call the exit() function, return-to-libc is more noticeable than the standard buffer overflow attack. However, it is able to bypass the non-executable stack countermeasure, making it quite useful.
+
+\end{document}
