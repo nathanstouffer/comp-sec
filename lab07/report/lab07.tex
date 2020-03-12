@@ -1,0 +1,109 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{fancyvrb}
+\usepackage{minipage-marginpar}
+\usepackage{changepage}
+
+\newcommand{\fig}[2]{ 
+\begin{figure}[h]
+	\centering
+	\caption{#2}
+	\includegraphics[width=.75\textwidth]{pics/#1}
+	\label{fig:#1}
+\end{figure} 
+}
+
+\begin{document}
+
+\title{CSCI 476: Lab 07}
+\author{Nathan Stouffer}
+\maketitle
+\newpage
+
+\section*{Task 1}
+
+Note: I could not get the spacing to quite look so nice on this lab. Sorry about that!
+
+\subsection*{Task 1A}
+
+Task 1A begins with practice using scapy. Figure \ref{fig:task1.1} contains the Machine A's code used to sniff an ICMP packet. Figure \ref{fig:task1.2} shows Machine B sending a packet to A. Figure \ref{fig:task1.3} displays the output. Figure \ref{fig:task1.4} (on the next page) shows the output when the sniffer is ran without ``sudo'' privileges. We get an error because the sniffer has to access low level hardware that only a super user has access to.
+
+\fig{task1.1}{ICMP sniffer}
+
+\fig{task1.2}{Sending ICMP packet}
+
+\fig{task1.3}{Receiving ICMP packet}
+
+\fig{task1.4}{Running sniffer without ``sudo''}
+
+\newpage
+\subsection*{Task 1B}
+
+Task 1B first asks that we build the following three sniffers: one for ICMP packets, TCP packets from a particular IP (and destined for port 23), and packets from/to a particular subnet. Figures \ref{fig:task1.1}, \ref{fig:task1.2}, and \ref{fig:task1.3} from Task 1A show this process in the case of capturing ICMP packets.
+
+\fig{task1.5}{arg2}
+
+\fig{task1.6}{arg2}
+
+Figure \ref{fig:task1.5} shows the sniffer code used to capture all packets from 10.0.2.5 and for port 23 on the host machine. Figure \ref{fig:task1.6} shows a separate machine sending such a packet and Figure \ref{fig:task1.7} shows the output of receiving that packet.
+
+\fig{task1.7}{arg2}
+
+\newpage
+
+Similarly, Figure \ref{fig:task1.8} shows the sniffer code used to capture all packets for 110.0.26.8/14. Figure \ref{fig:task1.9} shows a separate machine sending such a packet and Figure \ref{fig:task1.10} shows the output of receiving that packet.
+
+\fig{task1.8}{arg2}
+
+\fig{task1.9}{arg2}
+
+\fig{task1.10}{arg2}
+
+\newpage 
+
+\section*{Task 2}
+
+In Task 2, we must spoof an ICMP echo request (ie ping). This is done in Figures \ref{fig:task2.1} and \ref{fig:task2.2}. Figure \ref{fig:task2.1} shows the scapy code that is sent to the machine that is being spoofed and Figure \ref{fig:task2.2} shows a Wireshark window receiving the ping request.
+
+\fig{task2.1}{arg2}
+
+\fig{task2.2}{arg2}
+
+\newpage 
+
+\section*{Task 3}
+
+In Task 3, we implement a traceroute function. Figure \ref{fig:task3.0} shows the code that was implemented. The code works by incrementing the time to live variable for that packet and reading the source IP address of the machine that sent the death notification. Figure \ref{fig:task3.1} shows the traceroute where the destination is google (8.8.8.8).
+
+\fig{task3.0}{arg2}
+
+\fig{task3.1}{arg2}
+
+
+\newpage 
+
+\section*{Task 4}
+
+Task 4 implements a sniffing then spoofing attack. In this context we have Machine A and Machine B. Machine A runs the python code in Figure \ref{fig:task4.1}, which sends out a ping request to an IP address and waits for a response. If the response takes longer than 3 seconds, then the program assumes that the IP address is not awake. When Machine B is not running a spoof attack, Machine A can run the python program and get the output in Figure \ref{fig:task4.2}.
+
+\fig{task4.1}{arg2}
+
+\fig{task4.2}{arg2}
+
+However, Figure \ref{fig:task4.3} shows code that Machine B is running to implement a spoof attack. Essentially, Machine B monitors all ICMP packets on this LAN and immediately responds to the source claiming that the original destination IP address is awake.
+
+\fig{task4.3}{arg2}
+
+\newpage
+
+When Machine B is running the spoof attack, Figure \ref{fig:task4.4} shows that Machine A thinks the destination IP address is awake. You can also view Figure \ref{fig:task4.5} to see that Machine B sent an echo-reply in the name of the destination IP address.
+
+\fig{task4.4}{arg2}
+
+\fig{task4.5}{arg2} 
+
+Overall, sniffing and spoofing can be used to gather and present false information to users. However, the real power discovered in this lab was the ability to directly edit packets going on the internet. We will discuss this in future labs.
+
+\end{document}
