@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 from Crypto.Cipher import AES
 from Crypto.Util import Padding
 
@@ -10,13 +12,15 @@ print("Length of original data: {0:d}".format(len(data))) # should be 43 bytes
 print("Original data: {0}".format(data))
 
 # encrypt the data piece by piece
-cipher = AES.new(key, AES.MODE_CBC, iv)
-ciphertext  = cipher.encrypt(data[0:32])
-ciphertext += cipher.encrypt(Padding.pad(data[32:], 16))
-print("Ciphertext: {0}".format(ciphertext.hex()))
+#cipher = AES.new(key, AES.MODE_CBC, iv)
+#ciphertext  = cipher.encrypt(data[0:32])
+#ciphertext += cipher.encrypt(Padding.pad(data[32:], 16))
+#print("Ciphertext: {0}".format(ciphertext.hex()))
 
 # encrypt the entire data
-
+cipher = AES.new(key, AES.MODE_CBC, iv)
+ciphertext = cipher.encrypt(Padding.pad(data, 16))
+print("Ciphertex: {0}".format(ciphertex.hex()))
 
 # decrypt the ciphertext
 cipher = AES.new(key, AES.MODE_CBC, iv)
