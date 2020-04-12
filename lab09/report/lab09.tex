@@ -1,0 +1,285 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{fancyvrb}
+\usepackage{minipage-marginpar}
+\usepackage{changepage}
+\usepackage{amsmath}
+
+\newcommand{\fig}[2]{ 
+\begin{figure}[h]
+	\centering
+	\caption{#2}
+	\includegraphics[width=.75\textwidth]{pics/#1}
+	\label{fig:#1}
+\end{figure} 
+}
+
+\begin{document}
+
+\title{CSCI 476: Lab 09}
+\author{Nathan Stouffer}
+\maketitle
+\newpage
+
+\newpage
+\section*{Task 1}
+
+In Task 1, we are given a cipher text encrypted using a monoalphabetic cipher. Since we know that the plaintext was written in english and monoalphabetic ciphers are bijective maps between the alphabet and a permutation of the alphabet, we can use frequency analysis on the cipher text to deduce the cipher used to encrypt the data. \\\\
+Using frequency analysis, we determine that the most common trigrams in the cipher text are ``ytn'' and ``vup.'' Based on the fact that the most common trigrams in the English language are ``the'' and ``and,'' we can guess the following maps from plain to cipher text:
+$$  t \mapsto y \indent 
+	h \mapsto t \indent
+	e \mapsto n \indent
+	a \mapsto v \indent 
+	n \mapsto u \indent
+	d \mapsto p $$
+After applying those maps to the cipher text, we can make another few guesses based on words that are mostly filled with known letters. We now guess the following:
+$$  o \mapsto x \indent l \mapsto i \indent
+	b \mapsto g \indent u \mapsto z \indent
+	w \mapsto l \indent c \mapsto a $$
+Repeating this process, we can deduce the remaining unknown letters: \\ 
+\indent \indent \indent \indent \indent \indent
+$   f \mapsto b \indent i \mapsto m \indent
+	s \mapsto q \indent g \mapsto r \indent
+	r \mapsto h \indent m \mapsto c \indent
+	p \mapsto e \newline \indent \indent \indent \indent \indent \indent
+	x \mapsto k \indent y \mapsto d \indent 
+	z \mapsto w \indent v \mapsto f \indent 
+	q \mapsto j \indent k \mapsto s \indent 
+	j \mapsto o $ \\
+Thus, in abbreviated form, we could express the entire mapping as
+$$ ``abcdefghijklmnopqrstuvwxyz" \mapsto ``vgapnbrtmosicuxejhqyzflkdw" $$
+We can the use inverse mapping (since the map is bijective) to decrypt the cipher text. A portion of the decrypted text is displayed in Figure \ref{fig:task1.1}.
+
+\fig{task1.1}{Decrypted text}
+
+\newpage
+\section*{Note}
+A quick note for Tasks 2-5. We now turn to investigating the Advanced Encryption Standard (AES) and the modes within. We will use the following key and initialization vector when necessary. \\
+\indent -K 00112233445566778899AABBCCDDEEFF \\
+\indent -iv 000102030405060708090A0B0C0D0E0F
+\section*{Task 2}
+
+In Task 2, we are asked to explore three different encryption modes within AES and note their differences. The three modes used were ECB, CBC, and CFB. We begin with a 65 byte file ``plain.txt'' and use each mode to create a seperate, enrypted file. We can now note two primary differences. First, there is the size of the encrypted files (shown in Figure \ref{fig:task2.1}). Note that the file produced by the CFB mode has fewer bits than the file produced by modes CBC and ECB. This is because CFB is a stream cipher and does not require padding.
+
+\fig{task2.1}{Encrypted file sizes}
+
+We can also notice a weak point in the ECB mode. Figure \ref{fig:task2.2} displays the bytes of each encrypted file. We can see that there is no discernible patterns in the files encrypted with the CBC and CFB modes. However, in the ECB file, the exact same output is repeated 4 times. This is because ``plain.txt'' contains 4 copies of a 16 byte message and the ECB mode does not take appropriate precautions.
+
+\fig{task2.2}{Encrypted file contents}
+
+\newpage
+\section*{Task 3}
+
+In Task 3, we investigate the differences between the cipher texts of the modes ECB and CBC. In each subtask, we will begin with an image, and encrypt it twice (once in ECB mode and the other in CBC mode). 
+
+We would then like to view the contents of the encrypted file as an image. However, we can't since we have also encrypted the bmp header. However, this can be overcome since the header is a standard number of bytes (54 to be exact). To view the encrypted image, we can overwrite the encrypted header with the original header and use a standard image viewer (such as eog). Once this is done, we can view the encrypted image and make conclusions.
+
+\subsection*{Task 3.1}
+
+In Task 3.1, we perform the above process for the image given in Figure \ref{fig:task3.1.1}. Since there are few color changes, many of the bytes that represent this file will show up in repeated patterns.
+
+\fig{task3.1.1}{Unencrypted image}
+
+This effect can be clearly seen in Figure \ref{fig:task3.1.2}. Even though the image is encrypted, we can still deduce that the original image contained an ellipse and a rectangle. This is because Figure \ref{fig:task3.1.2} was encrypted using the ECB mode.
+
+\fig{task3.1.2}{Encrypted with ECB mode}
+
+On the other hand, Figure \ref{fig:task3.1.3} was encrypted using the CBC mode. This is a stronger mode because the encrypted image is entirely gibberish despite the fact that the input had a consistent pattern.
+
+Experiments with this image show the weakness of the ECB mode and the importance of initialization vectors (since the use of initialization vectors strengthen the encrypted data by removing patterns in the encrypted data). 
+
+\fig{task3.1.3}{Encrypted with CBC mode}
+
+\newpage
+\subsection*{Task 3.2}
+
+We now repeat the experiment from Task 3.1 using the image displayed in Figure \ref{fig:task3.2.1}. Before showing the experiment, we should note certain features about the image in Figure \ref{fig:task3.2.1}. First, there is a lot of space in the image with identical bits. This means that we should expect to find a pattern in the image encrypted with ECB mode. However, the triangle contains some information that should be lost: the color. When viewing the image produced with the ECB mode, we should only see that there \textit{was} a triangle, not it's color.
+
+\fig{task3.2.1}{Unencrypted image}
+
+Figure \ref{fig:task3.2.2} shows the image generated using the ECB mode. Note that the output is similar to what we expected. Inside the triangle, there is no pattern and we cannot even tell that the original triangle was colored. However, the pattern outside the triangle reveals that the original image contained a triangle.
+
+\fig{task3.2.2}{Encrypted with ECB mode}
+
+\newpage
+Figure \ref{fig:task3.2.3} shows the output generated using the CBC mode. There is no discernible pattern in the cipher image.
+
+\fig{task3.2.3}{Encrypted with CBC mode}
+
+\newpage
+\section*{Task 4}
+
+In Task 4, we focus on padding. In Task 4.1, we investigate the padding in the CBC mode and then we explore padding in modes ECB, CFB, and OFB in Task 4.2. Within each mode, we consider the following three files and their contents:
+\begin{align*}
+\textbf{plain5.txt: }  & 01234 \\
+\textbf{plain10.txt: } & 0123456789 \\
+\textbf{plain16.txt: } & \text{0123457890abcdef}
+\end{align*}
+We will then encrypt encrypt each file to produce a cipher text. From there, we decrypt the cipher text using the ``-nopad'' option. That way, we can view and analyze how padding works in each mode.
+
+\subsection*{Task 4.1}
+
+\subsubsection*{Cipher Block Chaining}
+
+We begin by looking at the CBC mode. The encrypted file sizes are displayed as follows:
+\begin{align*}
+\textbf{plain5.txt: }  & 16 \text{ bytes} \\
+\textbf{plain10.txt: } & 16 \text{ bytes} \\
+\textbf{plain16.txt: } & 32 \text{ bytes}
+\end{align*}
+Note that the file sizes are multiples of 16 bytes, this is because the CBC mode requires that the data comes in blocks of 128 bits (equivalent to 16 bytes). To perform the encryption process, padding must be added to the input. We can then decrypt (while keeping the added padding) and view how the padding works. The decrypted file is shown in Figure \ref{fig:task4.1.1}.
+
+\fig{task4.1.1}{Binary files for CBC}
+
+Keep in mind that ``0b'' in hex is 12 in decimal and ``10'' in hex is 16 decimal. From this information, we can describe the pattern for padding. Say there are $n$ bytes of data in the last block. We would then need to pad $16-n$ bytes (all computations are done in decimal). From Figure \ref{fig:task4.1.1}, the value that is used to pad is $16-n$ (converted to hex). This rule works in most cases, but note \textbf{dec16.txt} where the last block is 16 bytes. In this case, an entire block of padding is added.
+
+%  5: 16 bytes
+% 10: 16 bytes
+% 16: 32 bytes
+
+\newpage
+\subsection*{Task 4.2}
+
+We now move on to analyzing the padding methodology in the other encryption modes.
+
+\subsubsection*{Electronic Code Book}
+
+As Figure \ref{fig:task4.2.1} shows, the ECB mode uses the same padding process as CBC. That is, for a block with $n$ bytes, $16-n$ bytes of padding are added (excepting the case where $n$ is 16 bytes). The encrypted file sizes are shown below.
+\begin{align*}
+\textbf{plain5.txt: }  & 16 \text{ bytes} \\
+\textbf{plain10.txt: } & 16 \text{ bytes} \\
+\textbf{plain16.txt: } & 32 \text{ bytes}
+\end{align*}
+
+\fig{task4.2.1}{Binary files for EBC}
+
+%  5: 16 bytes
+% 10: 16 bytes
+% 16: 32 bytes
+
+\subsubsection*{Cipher Feedback}
+
+In the CFB mode, we encounter a difference in padding methodologies. We first encounter this when comparing the encrypted file sizes. They are as follows:
+\begin{align*}
+\textbf{plain5.txt: }  & 5 \text{ bytes} \\
+\textbf{plain10.txt: } & 10 \text{ bytes} \\
+\textbf{plain16.txt: } & 16 \text{ bytes}
+\end{align*}
+Note that the encrypted sizes match the input sizes exactly. This is because CFB mode is a stream cipher, so there is no need for padding. Figure \ref{fig:task4.2.2} shows the decrypted files without padding.
+
+\fig{task4.2.2}{Binary files for CFB}
+
+%  5:  5 bytes
+% 10: 10 bytes
+% 16: 16 bytes
+
+\subsubsection*{Output Feedback}
+
+The OFB mode is similar to CFB mode in that it is also a stream cipher. So we should see the same file sizes as well as decrypted data. Both are shown below.
+\begin{align*}
+\textbf{plain5.txt: }  & 5 \text{ bytes} \\
+\textbf{plain10.txt: } & 10 \text{ bytes} \\
+\textbf{plain16.txt: } & 16 \text{ bytes}
+\end{align*}
+
+\fig{task4.2.3}{Binary files for OFB}
+
+%  5:  5 bytes
+% 10: 10 bytes
+% 16: 16 bytes
+
+\newpage
+\section*{Task 5}
+
+Task 5 investigates error propagation. We will encrypt a file, change a single bit in the cipher text, and decrypt to view the results.
+
+\subsection*{Task 5.1}
+
+Before performing the experiment, we answer the following question for each encryption mode: \textit{How much information can you recover by decrypting the corrupted file?}
+\begin{enumerate}
+	\item \textbf{ECB: } In the ECB mode, we will lose a 16 byte block of information. Since only one bit in the ciper text will be flipped and each block is evaluated independently, only one block in the output will be affected. However, we will lose the entire block since it is now a different number. The decryption process will decrypt the cipher text just like any other block, which will result in an entirely different number than the original plain text.
+	\item \textbf{CBC: } The CBC mode will not only lose a 16 byte block (we call this block $B_n$), but also a single byte in block $B_{n+1}$, the block following $B_n$. Block $B_n$ is lost for the same reason as in ECB. We will lose a single byte in block $B_{n+1}$ because the cipher text of block $B_n$ is XORed with $B_{n+1}$ in the decryption process. This is will corrupt a single bit in the output of $B_{n+1}$.
+	\item \textbf{CFB: } The CFB mode's corrupted output will be quite similar to the CBC mode's output. The only difference is that the order will be flipped. That is, the corrupted bit will be in block $B_n$ and block $B_{n+1}$ is lost entirely. This is because the cipher text in CFB is OXRed with $B_n$ and then fed into the decryption process to compute $B_{n+1}$, losing that entire block.
+	\item \textbf{OFB: } The OFB mode will lose only the corrupted bit. This is because the cipher text is only used in the XOR process, it is never fed into the decrypt process.
+\end{enumerate}
+
+\subsection*{Task 5.2}
+
+We now perform the experiment for each of the encryption modes. The process is described as follows. For each encryption mode, we encrypt the same input file, flip a bit in the 55 byte of the cipher text, and decrypt to analyze the results. Figure \ref{fig:task5.2.0} displays the first three paragraphs of the original input to each encryption mode.
+
+\fig{task5.2.0}{Original input text}
+
+\subsubsection*{ECB}
+
+Figure \ref{fig:task5.2.1} shows the recovered text when the ECB encryption mode was used. As expected, the entire block with the corrupted cipher text bit is now lost. Most of the characters in fake block are now unintelligible.
+
+\fig{task5.2.1}{Recovered text - ECB}
+
+\subsubsection*{CBC}
+
+Figure \ref{fig:task5.2.2} shows the recovered text when the CBC encryption mode was used. This mode did not perform as predicted. Only the block with the corrupted bits was affected, while it was expected that an additional bit in the following block would be different.
+
+\fig{task5.2.2}{Recovered text - CBC}
+
+\subsubsection*{CFB}
+
+Figure \ref{fig:task5.2.3} shows the recovered text when the CFB encryption mode was used. This mode performed as predicted. The ``B'' in ``Beehive'' was changed to a ``C'' and the entire next block was lost.
+
+\fig{task5.2.3}{Recovered text - CFB}
+
+\subsubsection*{OFB}
+
+Figure \ref{fig:task5.2.4} shows the recovered text when the OFB encryption mode was used. This mode also performed as expected. Only a single character changed, the result of flipping a single bit. This character was a ``B'' to a ``C.''
+
+\fig{task5.2.4}{Recovered text - OFB}
+
+It should be noted that data lost in the XOR process is easier to recover than during the actual key-encryption process. Since the data is easier to recover, the XOR operation is not as secure as the key-encryption. Although XOR certainly adds a layer of complexity, it is not as difficult to break as the key-encryption.
+
+\newpage
+\section*{Task 6}
+
+\subsection*{Task 6.1}
+
+We now focus on the initialization vector. Encryption algorithms are completely determined by their inputs. By this, we mean that giving the exact same input will always produce the exact same output; there is no random component. Since the initialization vector is an input to the algorithm, this statement applies to it as well. Figure \ref{fig:task6.1.1} shows this in actions. It shows the hexidecimal contents of three encrypted files. Two of them (``iv1-0.bin'' and ``iv1-1.bin'') were created using separate encrypt commands with the same key and initialization vector. Their contents are identical. The other file (``iv2-0.bin''), was encrypted using the same key but a different initialization vector. It's contents are different than the other two.
+
+\fig{task6.1.1}{Identical inputs means identical outputs}
+
+\subsection*{Task 6.2}
+
+Task 6.2 exploits a vulnerability in OFB when the same initialization vector is used more than once. Let's say that an attacker knows the contents of P1 (some plain text) and C1 (the cipher text of P1). If the same initialization vector and the OFB mode are used, the attacker can decrypt any other message sent with the same key, and they don't even need to know the key!
+
+The OFB mode uses the plain text only in the XOR process. This means that crucial information (the output of the key-encryption process) can be deduced just by computing P1 XOR C1. We will call this value KEY-OUTPUT. Task 6.1 showed that if the same initialization vector is used, the same output will be produced. So for any C2 (another encrypted message), the attacker can just compute KEY-OUTPUT XOR C2 and deduce the plain text. This process is performed in Figure \ref{fig:task6.2.1}.
+
+\fig{task6.2.1}{Decoding C2}
+
+We can then convert the hex value ``4f726465723a204c61756e63682061206d697373696c65210a'' back to text. This gives the message ``Order: Launch a missile!''
+
+\subsection*{Task 6.3}
+
+Task 6.3 analyzes the chosen plain text attack. This attack works when the initialization vector follows a predictable pattern. An attacker who is trying to figure out what a message was, given that there are a limited number of options can use this attack.
+
+We will narrow our scope even further and say that the attacker knows the CBC mode was used to encrypt the data. Say the attacker wants to know the contents of P1 with corresponding C1 and IV1 (where the attacker knows C1 and IV1). The attacker could construct a new message P2 (with corresponding IV2) and find C2. If C1 and C2 match, the attacker has found the initial input. Since the attacker does not know the key, they cannot actually encrypt P2. They essentially have a block box that encrypts the data using a predictable IV. So the attacker wants to have input subject to the following (equivalent) constraints:
+$$ P2 \oplus IV2 = P1 \oplus IV1 $$
+$$ P2 = P1 \oplus IV1 \oplus IV2 $$
+Now the attacker can guess at P1 and use the above formula to compute the necessary input.
+
+We now give an example in Figure \ref{fig:task6.3.1}. A python script was used to run the actual encryption. Note that C1 = ``bef65565572ccee2a9f9553154ed9498.'' Now we know that P1 was either ``Yes'' or ``No.'' (excluding the period). From there we can use the process described above. The output is shown in Figure \ref{fig:task6.3.1}. In order to provide the correct input to the encryption, we used an entire block. So the python script outputs an extra 16 bytes that we can ignore; we need only focus on the first 16 bytes. With that in mind, we can deduce that the original input was ``Yes.''
+
+\fig{task6.3.1}{Deducing P1}
+
+\newpage
+\section*{Task 7}
+
+Task 7 asks us to find a key that was used to encrypt a cipher text. We know the plain text, the cipher text, and the initialization vector. We also know that the key is an English word fewer than 16 characters and the remaining space is padded with \# symbols. We will solve this by writing a program using the Crypto library. The program is displayed in Figure \ref{fig:task7.1}.
+
+\fig{task7.1}{Python script}
+
+We now give a quick explanation of the program. Since we know the cipher text, plain text, and initialization vector, all those variables are hard coded into the program. We then read in a file containing English words (possible keys). We construct keys of the appropriate form (length 16 and filling extra space with \#) and decrypt to see if recovered text matches the plain text. Eventually a match is found. The output of the program is shown in Figure \ref{fig:task7.2}.
+
+\fig{task7.2}{Decrypting cipher text}
+
+Encryption is a highly complex world and there is a lot of room for error. This lab focused on asymmetric encryption and specifically analyzed a number of modes within the Advanced Encryption Standard. Additionally, security holes were discussed.
+
+\end{document}
