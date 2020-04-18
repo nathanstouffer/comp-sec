@@ -1,0 +1,1 @@
+this string is at the end of both files
