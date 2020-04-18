@@ -26,6 +26,129 @@
 \newpage
 \section*{Task 1}
 
+In Task 1, the MD5 collision attack is investigated. This is done by using the md5collgen tool already installed on the Virtual Machine.
 
+\subsection*{Task 1A}
+
+For Task 1A, any prefix may be used. Figure \ref{fig:task1.a.1} shows the command line process to for creating the hash collision. Using the prefix ``secret message:)'' the md5collgen tool generates two binary files with the same hash. However, using the diff command, Figure \ref{fig:task1.a.1} shows that the two binary files are different. So out1.bin and out2.bin are a hash collision (hash($m_1$) = hash($m_2$) but $m_1 \neq m_2$).
+
+\fig{task1.a.1}{Generating hash collision}
+
+\subsection*{Task 1B}
+
+In Task 1B, it is wondered what happens when the prefix file is not a multiple of 64. The prefix used in Task 1A is one such prefix, so it is certain a hash collision can be generated for such files. Now take a closer look at the contents of out1.bin and out2.bin (the two inputs that collide in the hash space). Figure \ref{fig:task1.b.1} shows the contents of out1.bin while Figure \ref{fig:task1.b.2} shows out2.bin. Note that the tool generating the collisions pads the prefix up to 64 bytes before appending the binary that forces the collision. Precisely 64 bytes are required because that is the input size for the underlying algorithm.
+
+\fig{task1.b.1}{Contents of out1.bin}
+
+\fig{task1.b.2}{Contents of out2.bin}
+
+\subsection*{Task 1C}
+
+Task 1C asks that the experiment from Task 1B is repeated with a 64 byte block. The process of creating the hash collision and proving the two output files are different is shown in Figure \ref{fig:task1.c.1}. Then Figure \ref{fig:task1.c.2} shows that their MD5 hashes collide.
+
+\fig{task1.c.1}{Generating hash collision}
+
+\fig{task1.c.2}{Showing hash collision}
+
+It should be noted that there is no padding added in the case where the input is 64 bytes long (see Figures \ref{fig:task1.d.1} and \ref{fig:task1.d.2} for proof).
+
+\subsection*{Task 1D}
+
+The respective 128 bytes appended to each file to create the collision are not entirely different. In fact, the bytes differ only by 7 bits. From the contents of each file displayed in Figures \ref{fig:task1.d.1} and \ref{fig:task1.d.2}, the differences can be extracted.
+
+\fig{task1.d.1}{Contents of out1.bin}
+
+\fig{task1.d.2}{Contents of out2.bin}
+
+\newpage
+The differences between the two files are displayed in Table \ref{tab:task1.d.1}. Note a pattern in the changes: flip the first bit of the byte in out1.bin to compute the value of in out2.bin. The only exception to this rule is at offset 0xAE, where the last bit is flipped.
+
+\begin{table}[h]
+	\centering
+	\caption{Differences in out1.bin and out2.bin}
+	\begin{tabular}{|c||c|c|}
+		\hline
+		offset & out1.bin & out2.bin \\
+		\hline
+		0x53 & 75 & F5 \\
+		\hline
+		0x6D & 1D & 9D \\
+		\hline
+		0x7B & DA & 5A \\
+		\hline
+		0x93 & 2F & AF \\
+		\hline
+		0xAD & 78 & F8 \\
+		\hline
+		0xAE & 55 & 54 \\
+		\hline
+		0xBB & 2B & 2A \\
+		\hline
+	\end{tabular}
+	\label{tab:task1.d.1}
+\end{table}
+
+\newpage
+\section*{Task 2}
+
+Task 2 investigates the suffix extension property of MD5. That is, for two distinct inputs $m$ and $n$ (with hash($m$) = hash ($n$)), is it true that hash($m || t$) = hash($n || t$)? The following experiment shows this to be the case. Figure \ref{fig:task2.1} shows the construction of a hash collision.
+
+\fig{task2.1}{Constructing initial messages}
+
+Figure \ref{fig:task2.2} shows a number of steps. It first shows the creation of the concatenated files (the first two commands). Then, using the diff command, it is proven that the two files are different. Finally, the MD5 hashes are computed for each concatenated file. Viewing the last two commands in Figure \ref{fig:task2.2}, it can be seen that their hashes are identical. The odds of this occurring by chance are quite slim so it is safe to assume that concatenations preserve existing hash collisions.
+
+\fig{task2.2}{Adding suffix and showing hash}
+
+\newpage
+\section*{Task 3}
+
+Task 3 wonders whether two executable files can be constructed to have the same hash. The goal is to produce two programs with different source code, with the same function, and identical hashes. The program used is compiled from C source code in ``print\_array.c'' on the course repository. In this program, there is a 200 byte array filled with the hex for A. When compiled, the location of the array will be evident (using a hex editor) and changes can be made. Note that the array is 200 bytes long, so a portion of it can be overwritten with the 128 bytes needed to generate a hash collision for MD5.
+
+After compiling ``print\_array.c,'' a hex editor can be used to find that the beginning of the array is at offset 1040 in hex. This translates to 4160 in decimal. Padding might cause an error in the program so the input size must be a multiple of 64. The smallest multiple of 64 (that is greater than 4160) is chosen: 4224. Figure \ref{fig:task3.1} shows the use of the head/tail tools to copy the compiled binary into an appropriate prefix and suffix file. Then the hash collision is generated and placed into files $m$ and $n$.
+
+\fig{task3.1}{Creating hash collisions}
+
+From there, the distinct binary files $m$ and $n$ can be concatenated with the suffix to generate the valid programs ``exec1.out'' and ``exec2.out.'' This is shown in Figure \ref{fig:task3.2}.
+
+\fig{task3.2}{Creating executables}
+
+Figure \ref{fig:task3.3} shows two results. First, that both binary files are functional programs (ie they print out the array). Second, it is also shown that the two binary files differ. The only remaining question is whether their hashes are identical. It is expected that they are; $m$ and $n$ already had a hash collision and the same binary was tacked on as a suffix.
+
+\newpage
+
+\fig{task3.3}{Showing that the executables are functional}
+
+In fact, their hashes are identical! This is shown in Figure \ref{fig:task3.4}.
+
+\fig{task3.4}{Computing hashes}
+
+\newpage
+\section*{Task 4}
+
+In Task 4, two programs with different behavior are generated, despite having the same hash. This is done using the knowledge gained in the previous tasks. The final product will have two arrays that it compares, if the arrays are identical it will perform a benign action. But if they differ, it will perform a shifty action. But how is the program constructed? The original binary file looks like the following:
+\begin{center}
+	\begin{tabular}{|c|c|c|c|c|}
+		\hline
+		header & array 1 & mid & array 2 & suffix \\
+		\hline
+	\end{tabular}
+\end{center}
+
+In each executable, the prefix will be formed from the header and will populate array 1. The ``mid'' section will be left alone and array 2 should be populated with one of the 128 bytes generated from creating the hash collision. Then the suffix should be the same for both programs.
+
+Figure \ref{fig:task4.1} forms the hash collision and prepares the rest of the binary to be edited (by placing one of the collision tags in array 2).
+
+\fig{task4.1}{Forming hash collision}
+
+Figure \ref{fig:task4.2} shows the creation of the binary files ``benign.out'' and ``shifty.out.''
+
+\fig{task4.2}{Creating executables}
+
+\newpage
+Finally, Figure \ref{fig:task4.3} shows two results. The two programs perform different actions, but also have identical hashes. This is a major security flaw in the MD5 hash function.
+
+\fig{task4.3}{Showing different functionality and computing hashes}
+
+For hash functions to be effective, it is necessary that they are collision resistant. Without that property, a malicious coder may be able to get code certified but then publish different code with an identical hash. This makes users vulnerable to attackers.
 
 \end{document}
