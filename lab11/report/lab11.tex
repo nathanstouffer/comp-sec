@@ -1,0 +1,108 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{fancyvrb}
+\usepackage{minipage-marginpar}
+\usepackage{changepage}
+\usepackage{amsmath}
+
+\newcommand{\fig}[2]{ 
+\begin{figure}[h]
+	\centering
+	\caption{#2}
+	\includegraphics[width=.75\textwidth]{pics/#1}
+	\label{fig:#1}
+\end{figure} 
+}
+
+\begin{document}
+
+\title{CSCI 476: Lab 11}
+\author{Nathan Stouffer}
+\maketitle
+\newpage
+
+\newpage
+\section*{Task 1}
+
+Task 1 asks for the private key to be computed given the following information:
+\begin{enumerate}
+	\item p = F7E75FDC469067FFDC4E847C51F452DF
+	\item q = E85CED54AF57E53E092113E62F436F4F
+	\item e = 0D88C3
+\end{enumerate}
+The private key \textit{d} is computed using the command BN\_mod\_inverse() from the openssl big number library. The code to do this is shown in Figure \ref{fig:task1.1}.
+
+\fig{task1.1}{Code to compute \textit{d}}
+
+Then Figure \ref{fig:task1.2} shows the compilation and output of the program. The private key is printed along with the output.
+
+\fig{task1.2}{Computing \textit{d}}
+
+\newpage
+\section*{Task 2}
+
+Task 2 focuses on the encryption and decryption of a message. The following information is known:
+\begin{enumerate}
+	\item m = A top secret!
+	\item e = 010001 (this hex value equals to decimal 65537)
+	\item n = DCBFFE3E51F62E09CE7032E2677A78946A849DC4CDDE3A4D0CB81629242FB1A5
+	\item d = 74D806F9F3A62BAE331FFE3F0A68AFE35B3D2E4794148AACBC26AA381CD7D30D
+\end{enumerate}
+The message \textit{m} is converted to hex and then ran through the program shown in Figure \ref{fig:task2.1}. To encrypt the message, $c = m^d \mod n$ is computed. To decrypt, $m' = c^e \mod n$ is computed. By certain laws of mathematics $m$ and $m'$ must be the same.
+
+\fig{task2.1}{Code to encrypt and decrypt a message}
+
+Figure \ref{fig:task2.2} then shows the output of the process. In fact, the original message \textit{m} and the decrypted message are the same.
+
+\fig{task2.2}{Encrypting and decrypting a message}
+
+\newpage
+\section*{Task 3}
+
+Task 3 focuses only on decryption of a message. This is a scenario in which person A encrypts a message such that only person B can decrypt the message. The program shown in Figure \ref{fig:task3.1} is written from the perspective of person B (since the private key is known). The message that person B decrypts is 
+$$ C = 8C0F971DF2F3672B28811407E2DABBE1DA0FEBBBDFC7DCB67396567EA1E2493F $$
+The decryption is performed by computing $ C^d \mod n$, where $d$ and $n$ are taken from Task 2.
+
+\fig{task3.1}{Program to decrypt a ciphertext}
+
+The output of this process is shown in Figure \ref{fig:task3.2}. The message is ``Password is dees."
+
+\fig{task3.2}{Decrypting a ciphertext}
+
+\newpage
+\section*{Task 4}
+
+Task 4 illuminates another use for public/private key cryptography: digital signatures. Since the order of exponentiation does not affect the final result (ie $(m^a \mod n)^b \mod n = (m^b \mod n)^a \mod n$), person B could encrypt a message using their private key and everyone else could use their public key to decrypt the message and know that the message came from person B.
+
+Code to do this is shown in Figure \ref{fig:task4.1}. Note that there are two messages in this code, and they differ only by 1 bit! Will their signatures be similar?
+
+\fig{task4.1}{Code to sign a message}
+
+The signatures are radically different, as shown in Figure \ref{fig:task4.2}. This means that an attacker would have trouble changing a message and convincing people that the message was from a particular person (since they would not know the private key).
+
+\fig{task4.2}{Verifying the signatures}
+
+\newpage
+\section*{Task 5}
+
+Task 5 focuses on testing the validity of messages by way of digital signatures. The person decrypts the message using the public key of the sender (computing $s^e \mod n$), and then interprets the message. The code to do this is shown in Figure \ref{fig:task5.1}.
+
+\fig{task5.1}{Code to test validity of signature 1}
+
+The output of this program shows that decrypted signature and then converts the hex back to ascii. Figure \ref{fig:task5.2} shows that the decrypted message matches in the original message.
+
+\fig{task5.2}{Verifying signature 1}
+
+Figure \ref{fig:task5.3} explores the possibility that the signature has been tampered with. Say that a small change was made to the signature, what will happen to the decrypted message? The updated code (ie changing the cipher text) is shown in Figure \ref{fig:task5.3}.
+
+\fig{task5.3}{Code to test validity of signature 2}
+
+The output of the code is shown in Figure \ref{fig:task5.4}. Here, it can be seen that the decrypted message is entirely gibberish when converted back to ascii. So small changes in the cipher text can cause large changes when converting back to plain text.
+
+\fig{task5.4}{Showing signature 2 has been tampered}
+
+This lab explored some of the uses of the RSA encryption system. The math behind this encryption/decryption process is quite sound and is used regularly in our age of internet.
+
+\end{document}
