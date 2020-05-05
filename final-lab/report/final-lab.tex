@@ -1,0 +1,120 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{fancyvrb}
+\usepackage{minipage-marginpar}
+\usepackage{changepage}
+\usepackage{amsmath}
+
+\newcommand{\fig}[2]{ 
+\begin{figure}[h]
+	\centering
+	\caption{#2}
+	\includegraphics[width=.75\textwidth]{pics/#1}
+	\label{fig:#1}
+\end{figure} 
+}
+
+\newcommand{\sys}{\textit{system()} }
+\newcommand{\exec}{\textit{execve()} }
+
+\begin{document}
+
+\title{CSCI 476: Final Lab}
+\author{Nathan Stouffer}
+\maketitle
+\newpage
+
+\section*{Statement of Integrity}
+I, Nathan Stouffer (m26x387), agree that the solutions presented below are entirely my own. If I have used resources that are not my own, I have included appropriate citations.
+
+\section*{Task 1}
+
+\subsection*{Task 1.1}
+
+\textbf{Question: } Both \textit{system()} and \textit{execve()} can be used to execute external programs. Why is \\ \textit{system()} considered to be unsafe while \textit{execve()} is considered to be safe? \\\\
+\textbf{Answer: } While both commands can be used the execute external programs, the implementation of \textit{system()} is not as safe as \textit{execve()}. The \textit{execve()} function separates data and code, while \sys does not. That is, \exec has a command parameter and a data parameter. Nothing passed into the data parameter will be interpreted as a command. However, \sys does not take the same precautions. A single string is passed in and any valid command will be executed. This allows the user of a program to append any valid command to their input and have it executed at the privilege of the program. Additionally, \exec requires that the environment variables are specified for the child process, while \sys inherits all environment variables from the parent process. This allows for the shellshock attack to be performed.
+
+\subsection*{Task 1.2}
+
+\textbf{Question: } There are two typical approaches for letting normal users do privileged tasks: One is to write a root-owned Set-UID program, and let the user run it; another approach is to use a dedicated root daemon to do those privileged tasks for users. Please compare the attack surfaces of these two approaches, and describe which one is more secure. \\\\
+\textbf{Answer: }
+
+\subsection*{Task 1.3}
+
+\textbf{Question: } For the Shellshock vulnerability to be exploitable, two conditions need to be satisfied. What are these two conditions? \\\\
+\textbf{Answer: }
+
+\subsection*{Task 1.4}
+
+\textbf{Question: } Suppose we run \\\\
+\indent \$ nc -l 7070 \\\\
+on Machine 1 (IP address is 10.0.2.6), and we then type the following command on Machine 2 (IP address is 10.0.2.7). \\\\
+\indent \$ /bin/cat $<$ /dev/tcp/10.0.2.6/7070 $>$\&0 \\\\
+Describe what is going to happen. \\\\
+\textbf{Answer: } The ``nc -l 7070'' command tells Machine 1 to listen for a connection to be made on port 7070. Machine 2 then forms that connection with the command ``/bin/cat $<$ /dev/tcp/10.0.2.6/7070 $>$\&0.'' However, the input and output locations are changed. ``$<$ /dev/tcp/10.0.2.6/7070'' tells Machine 2 to listen for input from port 7070 on Machine 1 (because of the IP address). Additionally, output is redirected to the same place as input (which is port 7070 on Machine 1) by the command ``$>$\&0.'' So after the connection has been established, input typed into Machine 1 should be printed back to Machine 1. That is, lines will be double printed on Machine 1.
+
+\subsection*{Task 1.5}
+
+\textbf{Question: } What is ASLR and why does ASLR make buffer-overflow attacks more difficult? \\\\
+\textbf{Answer: } ASLR stands for Address Space Layout Randomization. This works by starting the stack frame of a program at different places in memory. This makes the buffer-overflow more difficult because the memory address that the overflow tells the program to return to might not even be in the valid address space of the program, causing a segmentation fault. This means that attacker repeat their attack until successful instead of running their code a single time.
+
+\subsection*{Task 1.6}
+
+\textbf{Question: } In the SYN flooding attack, why do we randomize the source IP address? Why can’t we just use the same IP address? \\\\
+\textbf{Answer: } When performing the SYN flooding attack, the source IP address is randomized so that a server assumes that each new connection request comes from a different computer. If the same IP address was used, the server would know that there was already a connection request from that IP address and would be able to effectively manage the stack consisting of connection requests.
+
+\subsection*{Task 1.7}
+
+\textbf{Question: } Are TCP Reset attacks effective against encrypted connections, such as SSH? Explain. \\\\
+\textbf{Answer: } TCP Reset attacks are effective against encrypted connections because the reset flag is a bit in the header of a packet. The packet header must be readable to intermediate routers, so it cannot be encrypted. Therefore, an attacker can spoof a packet with the reset flag set and terminate the connection.
+
+\subsection*{Task 1.8}
+
+\textbf{Question: } We need to protect a packet, such that the payload of the packet is encrypted, but the integrity of the entire packet, including its header, is protected. What encryption mode can we use to achieve this goal? Explain. \\\\
+\textbf{Answer: }
+
+\subsection*{Task 1.9}
+
+\textbf{Question: } 
+In the Diffie-Hellman key exchange, Alice sends $g^x \mod p$ to Bob, and Bob sends $g^y \mod p$ to Alice. How do they get a common secret? \\\\
+\textbf{Answer: } In this scenario, Alice now has $g^y \mod p$ and $x$ while Bob has $g^x \mod p$ and $y$. To gain the common secret, Alice can compute $g^{y^x} \mod p$ and Bob can compute $g^{x^y} \mod p$. By rules of exponents and the commutative property of multiplication, Alice and Bob then have the same value:
+$$ g^{x^y} \mod p = g^{xy} \mod p = g^{yx} \mod p = g^{y^x} \mod p $$
+
+\subsection*{Task 1.10}
+
+\textbf{Question: } Why do we use hybrid encryption? Why don’t we simply use public key cryptography to encrypt everything? \\\\
+\textbf{Answer: } While public key cryptography is more secure than symmetric encryption, it is also slower. Therefore, hybrid encryption is used to speed up communication while minimally compromising security.
+
+\subsection*{Task 1.11}
+
+\textbf{Question: } When we learned about hashing, we discussed the issue of hash collisions. Specifically, we discussed how cryptographic hash functions are designed to be collision resistant. One way to understand how collisions can manifest is to not talk about hash functions, but rather, to talk about birthdays. Given that our class is wrapping up with 66 students officially enrolled in the course, what is the probability that at least 2 people in our class share the same birthday? Explain. \\\\
+\textbf{Answer: }
+
+\subsection*{Task 1.12}
+
+\textbf{Question: } Please describe what the following line of code does: \\\\
+\indent pkt = sniff(filter='icmp and src host 10.0.2.9', prn=hdlpkt) \\\\
+\textbf{Answer: } The above line will view all incoming packets and select the icmp packets coming from IP address 10.0.2.9. It will then call the user implemented function hdlpkt with the selected packet as it's argument.
+
+\subsection*{Task 1.13}
+
+\textbf{Question: } Please briefly explain how the return-to-libc attack works. \\\\
+\textbf{Answer: }
+
+\subsection*{Task 1.14}
+
+\textbf{Question: } Identify at least three countermeasures to buffer-overflow attacks and briefly describe how they work. \\\\
+\textbf{Answer: }
+% no exec stack
+% aslr
+
+\subsection*{Task 1.15}
+
+\textbf{Question 1: } When you run programs at the commandline (e.g., ls, cat, top) or link to libraries (e.g., libc), how are these programs/libraries found? \\\\
+\textbf{Answer: } \\\\
+\textbf{Question 2: } What is a potential risk of using this approach to find programs/libraries? \\\\
+\textbf{Answer: }
+
+\end{document}
