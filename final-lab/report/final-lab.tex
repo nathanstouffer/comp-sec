@@ -18,6 +18,8 @@
 
 \newcommand{\sys}{\textit{system()} }
 \newcommand{\exec}{\textit{execve()} }
+\newcommand{\aud}{\textbf{audit.c} }
+\newcommand{\audtwo}{\textbf{audit2.c} }
 
 \begin{document}
 
@@ -39,12 +41,12 @@ I, Nathan Stouffer (m26x387), agree that the solutions presented below are entir
 \subsection*{Task 1.2}
 
 \textbf{Question: } There are two typical approaches for letting normal users do privileged tasks: One is to write a root-owned Set-UID program, and let the user run it; another approach is to use a dedicated root daemon to do those privileged tasks for users. Please compare the attack surfaces of these two approaches, and describe which one is more secure. \\\\
-\textbf{Answer: }
+\textbf{Answer: } The primary attack surface of a Set-UID program are its inputs, both explicit through the command line and hidden in environment variables. A root daemon can trust its environment variables but is vulnerable to capability leaking. Overall, a daemon is more secure.
 
 \subsection*{Task 1.3}
 
 \textbf{Question: } For the Shellshock vulnerability to be exploitable, two conditions need to be satisfied. What are these two conditions? \\\\
-\textbf{Answer: }
+\textbf{Answer: } For shellshock to be useful for an attacker, the server must be using bash and the attacker has to be able to send environment variables to the server.
 
 \subsection*{Task 1.4}
 
@@ -73,7 +75,7 @@ Describe what is going to happen. \\\\
 \subsection*{Task 1.8}
 
 \textbf{Question: } We need to protect a packet, such that the payload of the packet is encrypted, but the integrity of the entire packet, including its header, is protected. What encryption mode can we use to achieve this goal? Explain. \\\\
-\textbf{Answer: }
+\textbf{Answer: } To make sure the integrity of the entire packet is protected, we could send the hash of the original data so that the receiver can verify the authenticity of the information.
 
 \subsection*{Task 1.9}
 
@@ -90,7 +92,9 @@ $$ g^{x^y} \mod p = g^{xy} \mod p = g^{yx} \mod p = g^{y^x} \mod p $$
 \subsection*{Task 1.11}
 
 \textbf{Question: } When we learned about hashing, we discussed the issue of hash collisions. Specifically, we discussed how cryptographic hash functions are designed to be collision resistant. One way to understand how collisions can manifest is to not talk about hash functions, but rather, to talk about birthdays. Given that our class is wrapping up with 66 students officially enrolled in the course, what is the probability that at least 2 people in our class share the same birthday? Explain. \\\\
-\textbf{Answer: }
+\textbf{Answer: } The probability that at least 2 people in our class share the same birthday is the same as one minus the complement (that everyone has a different birthday). Let $X = $ at least 2 people in a group of 66 share birthday. This can be computed as the following:
+$$ P(X) = 1 - P(\overline{X}) = 1 - \prod_{k=1}^{66} \dfrac{365 - (k-1)}{365} $$
+Using a short program, $P(X) = 0.99980956912$. So the probability that at least 2 people in our class share a birthday is above $99\%$.
 
 \subsection*{Task 1.12}
 
@@ -101,20 +105,102 @@ $$ g^{x^y} \mod p = g^{xy} \mod p = g^{yx} \mod p = g^{y^x} \mod p $$
 \subsection*{Task 1.13}
 
 \textbf{Question: } Please briefly explain how the return-to-libc attack works. \\\\
-\textbf{Answer: }
+\textbf{Answer: } The return-to-libc attack works by finding the memory address of commands such as \sys and making a call to that function (ideally to open up a shell). Then the attacker can run arbitrary commands.
 
 \subsection*{Task 1.14}
 
 \textbf{Question: } Identify at least three countermeasures to buffer-overflow attacks and briefly describe how they work. \\\\
-\textbf{Answer: }
-% no exec stack
-% aslr
+\textbf{Answer: } One defense against the buffer-overflow attack is to make the stack non-executable. Then input can never be interpreted as code. Another defense mechanism is Address Space Layout Randomization (ASLR). This begins the stack frame at a random memory location so that an attacker cannot use a consistent memory address when performing the buffer-overflow attack. Another countermeasure is a stack guard. This is a slot in the stack frame that is expected to remain unchanged throughout the course of its existence. It is initialized randomly with each call.
 
 \subsection*{Task 1.15}
 
 \textbf{Question 1: } When you run programs at the commandline (e.g., ls, cat, top) or link to libraries (e.g., libc), how are these programs/libraries found? \\\\
-\textbf{Answer: } \\\\
+\textbf{Answer: } The libraries are found using the \$PATH environment variable. \\\\
 \textbf{Question 2: } What is a potential risk of using this approach to find programs/libraries? \\\\
-\textbf{Answer: }
+\textbf{Answer: } The risk of using this approach is that the shell will execute the first matching command it finds. An attacker could then change the \$PATH variable to point to a different directory where some malicious code is in an executable with an innocuous name (such as ls or cd).
+
+\newpage
+\section*{Task 2}
+
+\subsection*{Task 2.1}
+Task 2.1 asks for an explanation of \textbf{audit.c}. This program takes in a file name and then makes a call to \sys with ``/bin/cat $<$filename$>$'' as the argument. Assuming a regular file name, this will print the contents of the file to the console. However, as discussed earlier, \sys has certain vulnerabilities.
+
+\subsection*{Task 2.2}
+
+Task 2.2 asks that \aud be exploited when compiled as a set-UID program. Consider Figure \ref{fig:task2.2}. The argument passed in is ``h; sudo bash'' This will tell the program to open the file called h and then open a privileged shell. As can be seen on the next line in Figure \ref{fig:task2.2}, the auditor now has a root shell and can execute arbitrary commands. Additionally, the attacker already had the ability to execute arbitrary commands (just one at a time) because of the elevated privilege of the set-UID program.
+
+\fig{task2.2}{Opening root shell}
+
+\subsection*{Task 2.3}
+
+Now there is a new situation. The \exec function is being used now, so an attacker cannot chain an additional command on to their input. However, instead of /bin/cat, the /bin/more program is being used. The manual for /bin/more reveals that (for long enough files), there is a section where commands can be entered. Figure \ref{fig:task2.3} shows that an attacker is able to get a root shell using this method.
+
+\fig{task2.3}{Opening root shell}
+
+\newpage
+\section*{Task 3}
+
+\subsection*{Task 3.1}
+
+One method of defeating SQL injection attacks is to ``sanitize'' the input. That is, ensure special characters are interpreted as data. While this solution is able to defeat SQL injections, it does not remove the fundamental issue: that data and code are not separated. As such, it still might be possible for an attacker to wiggle in a SQL injection.
+
+\subsection*{Task 3.2}
+
+Task 3.2 asks that an attacker to a database enter an arbitrary salary using the SQL injection attack on the following line of code
+\begin{verbatim}
+$sql = "INSERT INTO employee (Name, EID, Password, Salary)
+        VALUES ('$name', 'EID6000', '$passwd', 80000)";	
+\end{verbatim}
+The attacker could enter
+\begin{verbatim}
+fake' 1000000)"; #
+\end{verbatim}
+in the password field to insert an arbitrary salary. This is performed on a regular old SQL database in Figure \ref{fig:task3.2}. Note the comment symbol ignoring the original code.
+
+\fig{task3.2}{Entering arbitrary salary}
+
+\subsection*{Task 3.3}
+
+In some cases, an attacker might be able to enter an arbitrary command to a database using a SQL injection. The attack is performed on the following line
+\begin{verbatim}
+$sql = "SELECT * FROM employee 
+        WHERE eid='$eid' and password='$passwd'";
+\end{verbatim}
+Consider Figure \ref{fig:task3.3} where
+\begin{verbatim}
+0'; UPDATE credential SET Salary=0 WHERE Name='test'; #
+\end{verbatim}
+is entered for the eid field.
+\newpage
+\fig{task3.3}{Executing arbitrary command}
+
+Figure \ref{fig:task3.3} shows the output. The command first searches for anyone with eid 0 (of which there are none) and then changes anyone with user name test to have a salary of \$0.
+
+\newpage
+\section*{Task 4}
+
+\subsection*{Task 4.1}
+
+Task 4.1 asks for the byte that was used to XOR the following: \\\\ C = 73626960647f6b206821204f21254f7d694f7624662065622127234f726927756d \\\\
+The following principle is used in this computation. Let the string constructed by repeating the encrypting byte be $B$ (such that $|B| = |C|$) and the input be $I$. Then it is know that $ I \oplus B = C $ and (by inverse property), $ I  = C \oplus B $. Figure \ref{fig:task4.1.1} shows some code that computes the XOR of the above number with every possible byte (of which there are 256). The output is then searched for a sensible (not gibberish) input.
+
+\fig{task4.1.1}{Code to test different bytes}
+
+The sensible input is found when the byte is 0x10. Additionally, the original message is crypto\{0x10\_15\_my\_f4v0ur173\_by7e\}.
+
+\fig{task4.1.2}{Final output}
+
+\newpage
+\subsection*{Task 4.2}
+
+This subtask searches for a key that was used to encrypt a cipher text. The plain text, the cipher text, and the initialization vector are all known. It is also known that the key is an English word fewer than 16 characters and the remaining space is padded with \# symbols. This is solved by writing a program that uses the Crypto library. The program is displayed in Figure \ref{fig:task4.2.1}.
+
+\fig{task4.2.1}{Python script}
+
+A quick explanation of the program now follows. Since the cipher text, plain text, and initialization vector are known, all those variables are hard coded into the program. Then a file containing English words (possible keys) is read in. Keys of the appropriate form (length 16 and filling extra space with \#) are then constructed. The possible key is used to decrypt the cipher text and see if recovered text matches the plain text. Eventually a match is found. The output of the program is shown in Figure \ref{fig:task4.2.2}.
+
+\fig{task4.2.2}{Decrypting cipher text}
+
+Thanks for the great class, I had a great time!
 
 \end{document}
